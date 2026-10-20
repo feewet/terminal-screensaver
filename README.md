@@ -48,6 +48,59 @@ The launcher looks for Node at `/opt/homebrew/bin/node` and `/usr/local/bin/node
 `$PATH`. If yours is elsewhere (nvm, volta...), add its absolute path to the `for NODE` line in
 `terminal-screensaver` before installing.
 
+## Manual install, with your own pick of scenes
+
+If you would rather skip the script and choose exactly which scenes play, do the same
+steps by hand.
+
+1. Clone the art and player at a pinned commit:
+
+   ```sh
+   git clone --no-checkout https://github.com/kailashsr38/ascii-magic-art ~/.local/share/ascii-magic-art &&
+   git -C ~/.local/share/ascii-magic-art checkout de88962156057cbef583bd265bf55e23d6c5e30d
+   ```
+
+   `--no-checkout` keeps upstream's latest code off disk. If the checkout fails, nothing is there
+   to run.
+
+2. Pick the scenes to rotate through. Each file in `screensavers/` is one option. Only its name
+   matters, so the files are empty:
+
+   ```sh
+   mkdir -p ~/.local/share/ascii-magic-art/screensavers
+   cd ~/.local/share/ascii-magic-art/screensavers
+   for s in orbit-window-earth summit-cloud-sea train-at-dusk cliff-lighthouse-night river-lantern-festival; do
+     touch $s.js
+   done
+   ```
+
+3. Install the launcher from this repo:
+
+   ```sh
+   mkdir -p ~/.local/bin
+   install -m 755 terminal-screensaver ~/.local/bin/terminal-screensaver
+   ```
+
+   The launcher looks for Node at `/opt/homebrew/bin/node` and `/usr/local/bin/node`, not on
+   `$PATH`. If yours is elsewhere (nvm, volta...), add its absolute path to the `for NODE` line
+   in `~/.local/bin/terminal-screensaver`.
+
+4. Add this to the **top** of `~/.zshrc`:
+
+   ```zsh
+   # Screensaver on new interactive terminal tabs; SCREENSAVER=0 disables.
+   if [[ -o interactive && -t 0 && -t 1 && -z $SCREENSAVER_SHOWN && $SCREENSAVER != 0 \
+         && -z $TMUX && -z $SSH_TTY && -z $CLAUDECODE \
+         && $TERM_PROGRAM != vscode && $TERMINAL_EMULATOR != JetBrains-JediTerm ]]; then
+     export SCREENSAVER_SHOWN=1
+     $HOME/.local/bin/terminal-screensaver
+   fi
+   ```
+
+   This block skips scripts, piped shells, nested shells, tmux, SSH, IDE terminals, and Claude Code.
+
+5. Open a new tab.
+
 ## Choose scenes
 
 Each file in `~/.local/share/ascii-magic-art/screensavers/` is one option. Only its name matters,
@@ -66,16 +119,6 @@ Only the 167 pieces upstream tags `wallpaper`, full-screen scenes and nothing el
 cd ~/.local/share/ascii-magic-art
 rm -f screensavers/*.js
 for p in $(grep -l '"wallpaper"' pieces/*.js); do touch screensavers/${p:t}; done
-```
-
-A hand-picked few:
-
-```sh
-cd ~/.local/share/ascii-magic-art
-rm -f screensavers/*.js
-for s in orbit-window-earth summit-cloud-sea train-at-dusk cliff-lighthouse-night river-lantern-festival; do
-  touch screensavers/$s.js
-done
 ```
 
 One scene by name. The name is the last part of its URL on
