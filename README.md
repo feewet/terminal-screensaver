@@ -1,14 +1,15 @@
 # terminal-screensaver
 
 Every new terminal tab opens on a random animated scene from
-[ascii-magic.com](https://www.ascii-magic.com/ascii). Press any key to get your prompt.
+[ascii-magic.com](https://www.ascii-magic.com/ascii). Press any key to get your prompt; the key
+you pressed is already typed there, as in any other tab.
 
 Nothing is fetched when a tab opens. The art and its player are cloned once, at a pinned commit,
 and the launcher refuses to play anything else.
 
 ## Requirements
 
-- zsh
+- zsh (with the `zsh/zselect` module, included on macOS and in standard builds)
 - Node.js 18 or newer
 - git
 
@@ -102,8 +103,8 @@ launcher plays nothing.
 
 - Skip it once: `SCREENSAVER=0 zsh`
 - Play it now: `terminal-screensaver`
-- The key that stops a scene is swallowed, and so is anything typed or pasted along with it.
-  Wait for the prompt before you type.
+- The key that stops a scene is not lost: it is the first character at your prompt. Pastes
+  arrive whole.
 - Uninstall: delete the `~/.zshrc` block, `~/.local/bin/terminal-screensaver`, and
   `~/.local/share/ascii-magic-art`.
 

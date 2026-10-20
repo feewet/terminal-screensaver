@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Plays a random ASCII scene from $APP/screensavers until any key is pressed.
+# Plays a random ASCII scene from $APP/screensavers until any key is pressed. That key is not
+# lost: it reaches the prompt, as it would in a tab that was already at its prompt.
 # Art and player: github.com/kailashsr38/ascii-magic-art (MIT), cloned to $APP.
 APP=$HOME/.local/share/ascii-magic-art
 # The player runs its pieces as code, so only the reviewed commit plays. A pull or a failed
@@ -13,8 +14,26 @@ for NODE in /opt/homebrew/bin/node /usr/local/bin/node; do [[ -x $NODE ]] && bre
 picks=()
 for s in $APP/screensavers/*.js(N:t:r); do [[ -f $APP/pieces/$s.js ]] && picks+=$s; done
 (( $#picks )) || exit 0
+# The key that stops a scene must reach the prompt, as in any other tab. So the player never
+# sees the keyboard: it plays in the background with no stdin, and the launcher waits for a
+# byte to *arrive* without reading it. The byte stays queued in the tty and the prompt reads it.
+zmodload zsh/zselect 2>/dev/null || exit 0
+saved=$(stty -g) || exit 0
 # --seconds is upstream's shell-startup mode: no exit hint, and a cap for forgotten tabs.
-$NODE $APP/bin/cli.js ${picks[RANDOM % ${#picks} + 1]} --seconds=86400 "$@"
-# The player eats only the key that stopped it. Drop anything typed after, so the tail of a
-# half-eaten command or paste never reaches the prompt and runs.
-[[ -t 0 ]] && while read -t 0 -k 1 -s; do :; done
+$NODE $APP/bin/cli.js ${picks[RANDOM % ${#picks} + 1]} --seconds=86400 "$@" </dev/null &
+pid=$!
+cleanup() {
+  kill -INT $pid 2>/dev/null; wait $pid 2>/dev/null
+  # The player restores the screen on SIGINT; repeat it in case it died some other way.
+  print -n '\e[?2004l\e[0m\e[?25h\e[?1049l'
+  stty $saved
+}
+# HUP: a closed tab must not leave the player running. The keyboard never signals (see -isig).
+trap 'cleanup; exit' INT TERM HUP
+# Non-canonical, no echo: a lone key is visible to select at once and is not drawn over the art.
+# No isig: Ctrl-C is then a byte for the prompt, not a SIGINT that would abort the rest of .zshrc.
+# Bracketed paste on, so a paste that stops the scene reaches ZLE wrapped, not as raw newlines.
+stty -icanon -echo -isig min 1 time 0
+print -n '\e[?2004h'
+while kill -0 $pid 2>/dev/null; do zselect -r 0 -t 50 && break; done
+cleanup
