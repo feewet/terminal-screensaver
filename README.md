@@ -10,10 +10,48 @@ and the launcher refuses to play anything else.
 ## Requirements
 
 - zsh (with the `zsh/zselect` module, included on macOS and in standard builds)
-- Node.js 18 or newer
+- Node.js 18 or newer, at `/opt/homebrew/bin/node` or `/usr/local/bin/node`
 - git
 
 ## Install
+
+```sh
+git clone https://github.com/feewet/terminal-screensaver
+cd terminal-screensaver
+./install.sh
+```
+
+Then open a new tab. The script:
+
+1. Clones the art and player to `~/.local/share/ascii-magic-art` and checks out a pinned commit.
+   The launcher refuses to play any other commit.
+2. Enables 526 of the 634 pieces as scenes: everything except app screens, empty states and page
+   dividers (the upstream `screens`, `empty-states` and `frames` categories).
+3. Copies the launcher to `~/.local/bin/terminal-screensaver`.
+4. Adds the hook below to the top of `~/.zshrc` (backup in `~/.zshrc.bak`). It skips scripts,
+   piped shells, nested shells, tmux, SSH, IDE terminals, and Claude Code.
+
+   ```zsh
+   # Screensaver on new interactive terminal tabs; SCREENSAVER=0 disables.
+   if [[ -o interactive && -t 0 && -t 1 && -z $SCREENSAVER_SHOWN && $SCREENSAVER != 0 \
+         && -z $TMUX && -z $SSH_TTY && -z $CLAUDECODE \
+         && $TERM_PROGRAM != vscode && $TERMINAL_EMULATOR != JetBrains-JediTerm ]]; then
+     export SCREENSAVER_SHOWN=1
+     $HOME/.local/bin/terminal-screensaver
+   fi
+   ```
+
+Running it again only fills in what is missing. Each step is a plain command in `install.sh` if
+you would rather do them by hand.
+
+The launcher looks for Node at `/opt/homebrew/bin/node` and `/usr/local/bin/node`, not on
+`$PATH`. If yours is elsewhere (nvm, volta...), add its absolute path to the `for NODE` line in
+`terminal-screensaver` before installing.
+
+## Manual install, with your own pick of scenes
+
+If you would rather skip the script and choose exactly which scenes play, do the same
+steps by hand.
 
 1. Clone the art and player at a pinned commit:
 
@@ -63,26 +101,37 @@ and the launcher refuses to play anything else.
 
 5. Open a new tab.
 
-## Add a screensaver
+## Choose scenes
 
-1. Find a scene on [ascii-magic.com/ascii](https://www.ascii-magic.com/ascii). Its name is the last
-   part of the URL. For `https://www.ascii-magic.com/ascii/train-at-dusk`, the name is `train-at-dusk`.
-2. Add an empty file with that name to the folder:
+Each file in `~/.local/share/ascii-magic-art/screensavers/` is one option. Only its name matters,
+so the files are empty. Delete a file to drop that scene.
 
-   ```sh
-   touch ~/.local/share/ascii-magic-art/screensavers/train-at-dusk.js
-   ```
+Everything, all 634 pieces:
 
-3. Check that it plays:
+```sh
+cd ~/.local/share/ascii-magic-art
+for p in pieces/*.js; do touch screensavers/${p:t}; done
+```
 
-   ```sh
-   node ~/.local/share/ascii-magic-art/bin/cli.js train-at-dusk
-   ```
+Only the 167 pieces upstream tags `wallpaper`, full-screen scenes and nothing else:
+
+```sh
+cd ~/.local/share/ascii-magic-art
+rm -f screensavers/*.js
+for p in $(grep -l '"wallpaper"' pieces/*.js); do touch screensavers/${p:t}; done
+```
+
+One scene by name. The name is the last part of its URL on
+[ascii-magic.com/ascii](https://www.ascii-magic.com/ascii): for
+`https://www.ascii-magic.com/ascii/train-at-dusk` it is `train-at-dusk`.
+
+```sh
+touch ~/.local/share/ascii-magic-art/screensavers/train-at-dusk.js
+node ~/.local/share/ascii-magic-art/bin/cli.js train-at-dusk   # check that it plays
+```
 
 The player can only play scenes that exist in its pinned copy. A scene published after that commit
 is skipped silently.
-
-To remove a scene, delete its file from `screensavers/`.
 
 ## Update the pin
 
@@ -96,8 +145,8 @@ git diff HEAD <new-commit> -- bin lib runtime pieces
 git checkout <new-commit>
 ```
 
-Then set `PIN=` in `~/.local/bin/terminal-screensaver` to the new commit. Until you do, the
-launcher plays nothing.
+Then set `PIN=` in this repo's `terminal-screensaver` to the new commit and run `./install.sh`
+again. Until you do, the launcher plays nothing.
 
 ## Use
 
@@ -111,4 +160,4 @@ launcher plays nothing.
 ## Credits
 
 The art and player are from [ascii-magic-art](https://github.com/kailashsr38/ascii-magic-art)
-(MIT). This repo only holds the launcher and these instructions.
+(MIT). This repo only holds the launcher, the install script and these instructions.
